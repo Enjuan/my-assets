@@ -1,0 +1,845 @@
+import { motion, AnimatePresence } from "motion/react";
+import { Play, ArrowRight, Menu, X, ArrowUpRight, Search, Globe, MapPin, Phone, Mail, ChevronRight, Shield, Award, Star } from "lucide-react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
+
+// --- Types & Constants ---
+
+type Page = "HOME" | "PROJECT" | "INVESTMENT" | "CONTACT";
+
+const COLORS = {
+  gold: "#e5c48f",
+  goldDark: "#cc8a3f",
+  black: "#000000",
+  zinc: "#0a0a0a"
+};
+
+// --- Components ---
+
+const Navbar = ({ activePage, setActivePage }: { activePage: Page, setActivePage: (p: Page) => void }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+  
+  const navItems: { label: string, id: Page }[] = [
+    { label: "HOME PAGE", id: "HOME" },
+    { label: "PROJECT", id: "PROJECT" },
+    { label: "INVESTMENT", id: "INVESTMENT" },
+    { label: "CONTACT US", id: "CONTACT" }
+  ];
+
+  return (
+    <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled ? "bg-black/80 backdrop-blur-md py-4" : "bg-transparent py-8"}`}>
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div 
+          className="flex items-center gap-2 cursor-pointer group"
+          onClick={() => setActivePage("HOME")}
+        >
+          <div className="w-10 h-10 border border-gold-primary rounded-full flex items-center justify-center font-black text-[9px] tracking-tighter group-hover:bg-gold-primary group-hover:text-black transition-all">
+             OSSA
+          </div>
+        </div>
+
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-12">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActivePage(item.id)}
+              className={`text-[11px] uppercase tracking-[0.3em] font-black transition-all relative py-1 ${
+                activePage === item.id ? "text-gold-300" : "text-gold-primary/60 hover:text-gold-primary"
+              }`}
+            >
+              {item.label}
+              {activePage === item.id && (
+                <motion.div 
+                  layoutId="nav-underline"
+                  className="absolute bottom-0 left-0 w-full h-0.5 bg-gold-300"
+                />
+              )}
+            </button>
+          ))}
+          
+          <button 
+            onClick={() => setActivePage("CONTACT")}
+            className="ml-4 px-6 py-2.5 bg-gold-300 text-black text-[10px] uppercase tracking-[0.2em] font-black rounded-sm hover:bg-gold-400 transition-all"
+          >
+            Inquire Now
+          </button>
+        </div>
+
+        {/* Mobile Toggle */}
+        <button className="md:hidden text-gold-primary" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Mobile Nav */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden bg-zinc-950 border-b border-white/10 px-6 overflow-hidden"
+          >
+            <div className="py-12 flex flex-col gap-8">
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { setActivePage(item.id); setIsOpen(false); }}
+                  className={`text-sm uppercase tracking-widest font-black text-left ${activePage === item.id ? "text-gold-300" : "text-gold-primary/60"}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <button 
+                onClick={() => { setActivePage("CONTACT"); setIsOpen(false); }}
+                className="w-full py-4 bg-gold-300 text-black text-xs uppercase tracking-widest font-black"
+              >
+                Inquire Now
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  );
+};
+
+// --- Page Content Components ---
+
+const HomePage = ({ onNavigate }: { onNavigate: (p: Page) => void }) => {
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+        video.muted = true;
+        video.defaultMuted = true;
+        
+        const attemptPlay = () => {
+          video.play().catch(err => {
+            console.log('视频自启动受阻:', err);
+          });
+        };
+
+        attemptPlay();
+        // 多次重试，确保加载完成
+        const timer1 = setTimeout(attemptPlay, 500);
+        const timer2 = setTimeout(attemptPlay, 1500);
+        
+        return () => {
+          clearTimeout(timer1);
+          clearTimeout(timer2);
+        };
+    }
+  }, []);
+
+  // 全局解锁逻辑 (针对移动端及强限制浏览器)
+  useEffect(() => {
+    const unlock = () => {
+      if (videoRef.current && videoRef.current.paused) {
+        videoRef.current.play().catch(() => {});
+      }
+    };
+    window.addEventListener('click', unlock, { once: true });
+    window.addEventListener('touchstart', unlock, { once: true });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      {/* Hero Section 背景自动播放视频 */}
+      <section className="relative w-full h-screen overflow-hidden bg-black">
+        {/* 自动播放背景视频 */}
+        <video 
+          ref={videoRef}
+          autoPlay 
+          muted 
+          loop 
+          playsInline 
+          disablePictureInPicture
+          preload="auto"
+          className="absolute top-0 left-0 w-full h-full object-cover z-2"
+        >
+          <source src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/4%E6%9C%8820%E6%97%A5%281%29.mp4" type="video/mp4" />
+          <source src="https://raw.githubusercontent.com/Enjuan/my-assets/main/4%E6%9C%8820%E6%97%A5%281%29.mp4" type="video/mp4" />
+          您的浏览器不支持视频播放
+        </video>
+
+        {/* 覆盖层 (z-index 位于视频和文字之间) */}
+        <div className="absolute inset-0 bg-black/40 z-5" />
+      
+        {/* Hero 文字内容 (z-index 最高) */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6 max-w-6xl mx-auto pt-32 md:pt-48">
+          <h1 className="text-5xl md:text-8xl lg:text-[112px] font-black uppercase leading-[0.88] tracking-tighter mb-12 text-gold-primary">
+            Eddie Moore<br />
+            Next<br />
+            Billion-Dollar<br />
+            Global IP Seris
+          </h1>
+
+          <p className="text-[12px] sm:text-[15px] uppercase tracking-[0.3em] text-gold-primary/50 mb-6 font-black">
+            Global Commercial Development • Film • Merchandise • Licensing
+          </p>
+
+          <p className="text-[10px] sm:text-[12px] uppercase tracking-[0.6em] text-gold-300 mb-16 font-black">
+            Presents The Future Of Entertainment
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <button 
+              onClick={() => onNavigate("PROJECT")}
+              className="px-12 py-5 bg-gold-200 text-black text-[12px] uppercase tracking-widest font-black flex items-center gap-2 hover:bg-gold-300 transition-all rounded-sm shadow-[0_0_30px_rgba(229,196,143,0.2)]"
+            >
+              Explore Project
+              <ArrowRight size={14} />
+            </button>
+            <button 
+              onClick={() => onNavigate("INVESTMENT")}
+              className="px-12 py-5 border border-gold-200/40 text-gold-200 text-[12px] uppercase tracking-widest font-black hover:bg-gold-primary hover:text-black transition-all rounded-sm"
+            >
+              Investment Opportunities
+            </button>
+          </div>
+          
+          <div className="mt-20 w-px h-16 bg-white/10" />
+        </div>
+      </section>
+
+    {/* Video Section */}
+    <section className="py-32 px-6 bg-[#0a0a0a]">
+      <div className="max-w-7xl mx-auto text-center md:text-left">
+        <h2 className="text-3xl md:text-[38px] font-black uppercase tracking-tighter mb-16 text-gold-primary">
+          EDDIE MOORE AND tHE GOLDEN GRAIL
+        </h2>
+
+          <div className="relative aspect-video bg-zinc-900 overflow-hidden rounded-sm border border-white/5 shadow-2xl">
+            {!isVideoPlaying ? (
+              <div 
+                className="absolute inset-0 cursor-pointer group"
+                onClick={() => setIsVideoPlaying(true)}
+              >
+                <img 
+                  src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/%E5%B1%8F%E5%B9%95%E6%88%AA%E5%9B%BE%202026-04-20%20094908.png" 
+                  alt="Video Preview"
+                  className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-[2s]"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 bg-gold-primary/90 backdrop-blur-md text-black rounded-sm flex items-center justify-center transition-all group-hover:scale-110 group-hover:bg-gold-200 shadow-2xl">
+                    <Play fill="currentColor" size={36} />
+                  </div>
+                </div>
+                <div className="absolute bottom-10 left-10">
+                   <p className="text-[10px] font-black tracking-[0.5em] text-white/50 uppercase">Click to Play Cinematic Teaser</p>
+                </div>
+              </div>
+            ) : (
+              <iframe 
+                className="w-full h-full"
+                src="https://www.youtube.com/embed/A8Ypb9x61ZQ?rel=0&modestbranding=1&iv_load_policy=3&autoplay=1" 
+                title="Eddie Moore Teaser" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                allowFullScreen
+              />
+            )}
+          </div>
+      </div>
+    </section>
+
+    {/* Banners */}
+    <div className="bg-black">
+      <GradientBanner 
+        text="A BRAND NEW MAGICAL WORLD AWAITS" 
+        bgClass="bg-gradient-to-r from-[#3e3f2d] via-[#52533c] to-[#3e3f2d]" 
+      />
+      <GradientBanner 
+        text="A MAGIC EPIC FOR OUR TIME" 
+        bgClass="bg-[#21180b]" 
+      />
+      <GradientBanner 
+        text="A NEW FANTASY WORLD FOR THE WORLD" 
+        bgClass="bg-gradient-to-r from-[#424124] via-[#6a6b3d] to-[#424124]" 
+      />
+    </div>
+
+    {/* Miracle Section */}
+    <section className="py-48 bg-black text-center px-6">
+       <div className="max-w-5xl mx-auto">
+         <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-[0.95] mb-12 text-gold-primary">
+           YOU, ONE IN A MILLION<br />
+           COME AND WITNESS<br />
+           THE BIRTH OF A MIRACLE FOR OUR TIME
+         </h2>
+         <p className="text-gold-primary/40 text-[14px] sm:text-[16px] font-black mb-16 tracking-[0.4em] max-w-2xl mx-auto uppercase">
+           We are looking for visionary strategic partners to co-create this unprecedented audiovisual feast.
+         </p>
+         <button 
+           onClick={() => onNavigate("INVESTMENT")}
+           className="px-16 py-6 bg-gold-200 text-black text-[12px] uppercase tracking-widest font-black hover:bg-gold-300 transition-all rounded-sm"
+         >
+           Investment
+         </button>
+       </div>
+    </section>
+    </motion.div>
+  );
+};
+
+const ProjectPage = ({ onNavigate }: { onNavigate: (p: Page) => void }) => (
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="bg-black">
+    {/* Project Hero */}
+    <section className="relative min-h-[90vh] flex flex-col items-center justify-end pb-32 px-6 overflow-hidden bg-black">
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/brian-mcgowan-3ksAP4H6HgA-unsplash.jpg" 
+          alt="Hands with Gems" 
+          className="w-full h-full object-cover opacity-80"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+      </div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto w-full">
+        <span className="text-[10px] text-gold-300 uppercase tracking-[0.5em] font-black mb-4 block">Now in Production</span>
+        <h1 className="text-6xl md:text-[120px] font-black uppercase leading-[0.8] tracking-tighter mb-6 text-white">
+          EDDIE MOORE<br />
+          <span className="text-gold-primary">GLOBAL</span><br />
+          <span className="text-gold-primary">PHENOMENON IP</span>
+        </h1>
+        <p className="text-[14px] text-gold-primary/60 font-black uppercase tracking-[0.3em] ml-1">Reignite the World's Magic Fever</p>
+      </div>
+    </section>
+
+    {/* IP Universe Overview */}
+    <section className="py-32 px-6 max-w-7xl mx-auto">
+      <div className="grid md:grid-cols-2 gap-12 lg:gap-24 items-stretch">
+        {/* Left: Text Content */}
+        <div className="flex flex-col justify-center">
+          <span className="text-[10px] text-gold-300 uppercase tracking-widest font-black mb-8 block">01 / OVERVIEW</span>
+          <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-12 text-gold-primary">
+            IP UNIVERSE<br />OVERVIEW
+          </h2>
+          
+          <div className="relative group">
+            <p className="text-3xl md:text-4xl lg:text-5xl font-black leading-tight text-gold-primary italic tracking-tighter drop-shadow-lg mb-12">
+              "It tells the tale of Eddie Moore, the Dark Lord's son, seeking revenge on Wyestein, the magical leader who killed his father."
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Image Content */}
+        <div className="relative min-h-[500px] md:min-h-full rounded-sm overflow-hidden border border-white/5 shadow-2xl group">
+          <img 
+            src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/ScreenShot_2026-04-21_103142_946.png" 
+            alt="IP Overview" 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[3s]"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+          <div className="absolute top-10 right-10 w-24 h-px bg-gold-primary/30" />
+        </div>
+      </div>
+    </section>
+
+    {/* Fantasy Setting Buttons */}
+    <section className="py-24 px-6 bg-[#050505]">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-16">
+          <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-gold-primary">CRAFTING A BRAND-NEW<br />FANTASY SETTING</h2>
+        </div>
+        <div className="space-y-12">
+          {["A NEW MAGIC SYSTEM", "NEW MAGICAL RACES", "NEW MAGICAL CREATURES"].map((t, i) => {
+            const getImageSrc = (index: number) => {
+              if (index === 0) return "https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/rhii-photography-_DBUHpsjpRw-unsplash.jpg";
+              if (index === 1) return "https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/1.png";
+              if (index === 2) return "https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/ScreenShot_2026-04-21_130915_982.png";
+              return `https://picsum.photos/seed/magic-${index}/1200/800?grayscale`;
+            };
+
+            return (
+              <div key={i} className="space-y-6">
+                <button className="w-full py-12 bg-gradient-to-r from-[#8a6d3b] to-[#1a130a] border-l-4 border-gold-primary text-2xl md:text-4xl font-black uppercase tracking-tighter text-black flex items-center justify-center gap-4 hover:brightness-125 transition-all shadow-xl group">
+                  {t}
+                  <ChevronRight className="group-hover:translate-x-2 transition-transform" size={32} />
+                </button>
+                <div className="w-full h-[400px] md:h-[600px] rounded-sm overflow-hidden border border-white/5 relative group">
+                  <img 
+                    src={getImageSrc(i)} 
+                    alt={t}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[5s] opacity-100"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+                  <div className="absolute bottom-10 left-10 h-px w-20 bg-gold-300/30" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+
+    {/* Character Section */}
+    <section className="py-32 px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-12 items-center border-b border-white/5 pb-20">
+           <div>
+              <p className="text-xl md:text-2xl font-black text-gold-primary uppercase leading-tight tracking-tighter max-w-xl">
+                Introducing a diverse roster of heroes and villains, each with unique abilities and deep backstories crafted by award-winning screenwriters.
+              </p>
+           </div>
+           <div className="lg:text-right">
+              <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none text-gold-primary">
+                ALL-NEW<br />CHARACTERS
+              </h3>
+           </div>
+        </div>
+
+         <div className="grid md:grid-cols-2 gap-6 mt-6">
+            <div className="bg-zinc-950 p-12 border border-white/5 flex flex-col items-center justify-center text-center aspect-video md:aspect-auto min-h-[400px]">
+               <span className="text-2xl md:text-4xl font-black uppercase tracking-tighter leading-none text-gold-primary">
+                 AN ALL-NEW CAST<br />OF CHARACTERS
+               </span>
+            </div>
+            <div className="relative aspect-video md:aspect-auto overflow-hidden border border-white/5 min-h-[400px]">
+               <img src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/ScreenShot_2026-04-21_193129_042.png" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </div>
+         </div>
+
+         <div className="grid md:grid-cols-2 gap-6 mt-6">
+            <div className="relative aspect-video md:aspect-auto overflow-hidden border border-white/5 min-h-[400px]">
+               <img 
+                 src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/ScreenShot_2026-04-21_194848_187.png" 
+                 className="w-full h-full object-cover" 
+                 referrerPolicy="no-referrer"
+                 alt="Mythic Hero"
+               />
+            </div>
+            <div className="bg-zinc-950 p-12 border border-white/5 flex flex-col items-center justify-center text-center aspect-video md:aspect-auto min-h-[400px]">
+               <span className="text-2xl md:text-4xl font-black uppercase tracking-tighter leading-none text-gold-primary">
+                 A MYSTERIOUS<br />NEW VILLAIN
+               </span>
+            </div>
+         </div>
+      </div>
+    </section>
+
+
+
+    {/* IP Format Section */}
+    <section className="pt-32 pb-16 px-6 bg-black">
+      <div className="max-w-7xl mx-auto grid md:grid-cols-[2fr_1fr] gap-8">
+        <div className="p-10 md:p-16 pb-8 md:pb-12 bg-[#0c0c0c] border border-white/5 relative overflow-hidden group">
+          <h3 className="text-7xl md:text-[110px] font-black uppercase tracking-tighter leading-[0.8] text-white">
+            IP FORMAT<br />
+            <span className="text-gold-primary">9 BOOKS</span><br />
+            <span className="text-gold-primary">9 MOVIES</span>
+          </h3>
+        </div>
+        <div className="p-10 md:p-16 pb-8 md:pb-12 bg-[#0c0c0c] border border-white/5 flex flex-col justify-between">
+           <div>
+             <span className="text-[10px] font-black text-gold-300 uppercase tracking-widest block mb-6">GLOBAL STRATEGY</span>
+             <p className="text-sm md:text-base font-black text-gold-primary uppercase leading-relaxed tracking-wider">
+               Presenting a fully developed IP format with 9 books and 9 films at its core.<br /><br />
+               This expansive framework supports deep worldbuilding, consistent storytelling, and massive cross-media potential.
+             </p>
+           </div>
+           <div className="h-16 border-l border-b border-white/10 mt-8" />
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto mt-4">
+        <div className="w-full h-auto overflow-hidden rounded-sm border border-white/5">
+          <img 
+            src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/22.png" 
+            alt="IP Ecosystem" 
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      </div>
+    </section>
+
+    {/* Static Large Text Section */}
+    <section className="py-24 border-t border-white/5">
+       <div className="py-16 text-center px-6 bg-zinc-950/20 border-b border-white/5">
+          <h2 className="text-6xl md:text-9xl font-black uppercase text-gold-primary tracking-tighter">
+            Novels, Movies, Short Videos, and Full-Media Reach
+          </h2>
+       </div>
+       <div className="py-20 text-center px-6">
+          <span className="text-[10px] font-black text-gold-primary uppercase tracking-[0.5em] mb-8 block">IP MERCHANDISE, DESIGNER TOYS, THEME PARKS</span>
+          <h2 className="text-4xl md:text-[80px] font-black uppercase tracking-tighter text-gold-primary leading-none">
+            INTEGRATED ONLINE AND OFFLINE OPERATIONS
+          </h2>
+       </div>
+    </section>
+
+    {/* Final CTA */}
+    <section className="py-32 px-6 border-t border-white/5 text-center">
+       <p className="text-[11px] font-black text-gold-primary/40 uppercase tracking-[0.4em] mb-12">REIGNITE THE WORLD'S MAGIC FEVER</p>
+       <div className="flex justify-center">
+          <button 
+            onClick={() => onNavigate('CONTACT')}
+            className="px-20 py-6 bg-gold-primary text-black font-black uppercase tracking-widest text-xs hover:bg-gold-400 transition-all rounded-sm shadow-2xl cursor-pointer"
+          >
+            GET PITCHDECK
+          </button>
+       </div>
+    </section>
+  </motion.div>
+);
+
+const InvestmentPage = ({ onNavigate }: { onNavigate: (p: Page) => void }) => (
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    {/* Investment Hero */}
+    <section className="relative min-h-[90vh] flex flex-col justify-center px-6 pt-32 pb-20 overflow-hidden bg-black">
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/pexels-zlataky-cz-61823415-8442429.jpg" 
+          alt="Gold Investment" 
+          className="w-full h-full object-cover opacity-70 contrast-125 brightness-90"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+      </div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto w-full">
+         <span className="text-[12px] text-gold-300 uppercase tracking-[0.4em] font-black mb-10 block animate-pulse">Investment Opportunity</span>
+         <div className="space-y-4">
+           <h1 className="text-5xl md:text-8xl lg:text-[112px] font-black uppercase leading-[0.82] tracking-tighter text-gold-primary">
+             RIGHT HERE RIGHT NOW
+           </h1>
+           <h1 className="text-5xl md:text-8xl lg:text-[112px] font-black uppercase leading-[0.82] tracking-tighter text-gold-200/90">
+             A ONCE-IN-A-LIFE
+           </h1>
+           <h1 className="text-5xl md:text-8xl lg:text-[112px] font-black uppercase leading-[0.82] tracking-tighter text-gold-primary">
+             OPPORTUNITY
+           </h1>
+         </div>
+      </div>
+    </section>
+
+    {/* Feature Boxes */}
+    <section className="px-6 py-20 bg-black">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[
+          "Top Global IP • Prime Fortune Opportunity",
+          "Once-in-a-Lifetime • For the Elite Only",
+          "Exclusive IP • Limited Investment Access"
+        ].map((item, index) => (
+          <div 
+            key={index} 
+            className="aspect-square flex items-center justify-center p-12 text-center border border-white/5 bg-gradient-to-br from-[#1a1a0d] to-[#332e16] rounded-sm group hover:scale-[1.02] transition-transform duration-700 shadow-2xl"
+          >
+            <p className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-gold-primary leading-tight drop-shadow-lg group-hover:text-gold-200 transition-colors">
+              {item}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* Alternating Highlights */}
+    <section className="bg-black py-0">
+      {/* Row 1: Left Image, Right Text */}
+      <div className="grid md:grid-cols-2">
+        <div className="h-[400px] md:h-[600px] overflow-hidden">
+          <img 
+            src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/dmytro-demidko-eBWzFKahEaU-unsplash.jpg" 
+            alt="Investment Security" 
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        <div className="flex flex-col justify-center p-8 md:p-20 bg-zinc-950/50 border-y md:border-y-0 md:border-l border-white/5">
+          <span className="text-gold-300 font-black uppercase tracking-[0.3em] text-[10px] mb-6">Investment Security</span>
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white mb-8 leading-[0.9]">
+            High Security,<br/>High Upside
+          </h2>
+          <div className="space-y-6 mb-12 max-w-xl">
+            <p className="text-white/70 text-lg font-medium leading-relaxed">
+              This premium evergreen IP minimizes downside risk with full-layer risk safeguards and stable recurring revenue. Full operational transparency protects your principal across every project phase.
+            </p>
+            <p className="text-gold-primary text-lg font-bold leading-relaxed italic">
+              Multi-dimensional global commercialization delivers durable, high compound upside for every investor.
+            </p>
+          </div>
+          <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="h-px w-20 bg-gold-300/30 group-hover:w-32 transition-all duration-500" />
+            <span className="text-gold-300 font-black uppercase tracking-widest text-[10px]">Security Guaranteed</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Right Image, Left Text */}
+      <div className="grid md:grid-cols-2">
+        <div className="order-2 md:order-1 flex flex-col justify-center p-8 md:p-20 bg-black border-y md:border-y-0 md:border-r border-white/5">
+          <span className="text-gold-300 font-black uppercase tracking-[0.3em] text-[10px] mb-6">CULTURE & GLOBAL INFLUENCE</span>
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white mb-8 leading-[0.9]">
+            Beyond Returns,<br/>Global Cultural Reach
+          </h2>
+          <div className="space-y-6 mb-12 max-w-xl">
+            <p className="text-white/70 text-lg font-medium leading-relaxed">
+              This opportunity rewards you not only with outstanding capital gains. It builds enduring global cultural footprint and cross-continental brand prestige.
+            </p>
+            <p className="text-gold-primary text-lg font-bold leading-relaxed italic">
+              You become a foundational patron of an IP that will resonate across generations and worldwide audiences.
+            </p>
+          </div>
+          <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="h-px w-20 bg-gold-300/30 group-hover:w-32 transition-all duration-500" />
+            <span className="text-gold-300 font-black uppercase tracking-widest text-[10px]">Cultural Impact</span>
+          </div>
+        </div>
+        <div className="order-1 md:order-2 h-[400px] md:h-[600px] overflow-hidden">
+          <img 
+            src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/ScreenShot_2026-04-20_232245_224.png" 
+            alt="Market Expansion" 
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      </div>
+    </section>
+
+    <section className="px-6 py-32 max-w-7xl mx-auto">
+       <div className="grid lg:grid-cols-3 gap-8 mb-32">
+          <TierCard 
+            tier="ELITE PARTNER" 
+            returnRate="A Hundredfold Return" 
+            features={[
+              "Top-tier Profit Share", 
+              "Permanent IP Legacy Credit", 
+              "Global Premiere VIP Rights"
+            ]} 
+            onClick={() => onNavigate("CONTACT")}
+          />
+          <TierCard 
+            tier="PLATINUM PARTNER" 
+            returnRate="Prime Investment Value" 
+            features={[
+              "Quarterly Base Dividends", 
+              "Core Creator Co-Creation Rights", 
+              "Exclusive IP Collector Benefits"
+            ]} 
+            highlighted 
+            onClick={() => onNavigate("CONTACT")}
+          />
+          <TierCard 
+            tier="STAR PARTNER" 
+            returnRate="Solid Growth Potential" 
+            features={[
+              "Stable Revenue Distribution", 
+              "Official Honor Producer Title", 
+              "Priority Investor Community Access"
+            ]} 
+            onClick={() => onNavigate("CONTACT")}
+          />
+       </div>
+    </section>
+  </motion.div>
+);
+
+const ContactPage = () => (
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    {/* Contact Hero */}
+    <section className="relative min-h-screen flex flex-col items-center justify-center pt-32 pb-40 px-6 overflow-hidden bg-black">
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/ScreenShot_2026-04-17_144226_713.png" 
+          alt="Contact Background" 
+          className="w-full h-full object-cover opacity-80 contrast-110"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/80" />
+      </div>
+
+      <div className="relative z-10 text-center max-w-4xl mx-auto">
+          <span className="text-gold-300 uppercase tracking-[0.5em] text-[10px] font-black mb-8 block animate-pulse">Join the Universe</span>
+          <h1 className="text-7xl md:text-9xl font-black uppercase tracking-tighter mb-8 text-gold-primary leading-none">Contact Us</h1>
+          <p className="text-gold-primary/60 max-w-2xl mx-auto text-lg md:text-xl font-medium tracking-wide">
+            Collaborate with the next generation of cinematic storytelling.
+          </p>
+      </div>
+    </section>
+
+    {/* Mission Banner */}
+    <section className="py-48 flex justify-center border-t border-black/20 bg-gradient-to-r from-[#4d4c2b] via-[#7a7b45] to-[#4d4c2b]">
+      <div className="max-w-6xl mx-auto px-6 text-center">
+        <p className="text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-tight text-gold-primary leading-[1.3] drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+          Ossa Studio is a world-class IP studio, specializing in the creation and operation of premium IP content. We are committed to developing IP projects with true global impact, each one crafted to transcend generations and cultures, leaving a lasting mark on the world.
+        </p>
+      </div>
+    </section>
+
+    <section className="px-6 py-32 max-w-7xl mx-auto space-y-24">
+       {/* Beijing Row */}
+       <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="flex gap-6">
+             <div className="w-px h-24 bg-gold-300" />
+             <div>
+                <h4 className="text-gold-300 font-black uppercase tracking-widest text-xs mb-4">Beijing</h4>
+                <p className="text-2xl md:text-4xl font-black text-gold-primary/90 leading-tight">Creative Media Park, Block B7, Beijing, China</p>
+             </div>
+          </div>
+          <div className="aspect-[16/9] overflow-hidden rounded-2xl">
+             <img src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/zhang-kaiyv-z4whdrqkO40-unsplash.jpg" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" alt="Beijing Office" referrerPolicy="no-referrer" />
+          </div>
+       </div>
+
+       {/* LA Row */}
+       <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="order-2 md:order-1 aspect-[16/9] overflow-hidden rounded-2xl">
+             <img src="https://cdn.jsdelivr.net/gh/Enjuan/my-assets@main/gabe-VJ5i5ARz6jc-unsplash.jpg" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" alt="Los Angeles Office" referrerPolicy="no-referrer" />
+          </div>
+          <div className="order-1 md:order-2 flex gap-6 md:justify-end md:text-right">
+             <div className="space-y-4">
+                <h4 className="text-gold-300 font-black uppercase tracking-widest text-xs mb-4">Los Angeles</h4>
+                <p className="text-2xl md:text-4xl font-black text-gold-primary/90 leading-tight">Melrose Ave, Suite 500, West Hollywood, CA</p>
+             </div>
+             <div className="w-px h-24 bg-gold-300 md:order-last" />
+          </div>
+       </div>
+
+       {/* Form Section */}
+       <div className="pt-24 border-t border-white/5">
+          <div className="max-w-4xl mx-auto bg-zinc-900/50 backdrop-blur-sm border border-white/10 p-8 md:p-16 rounded-3xl">
+             <div className="text-center mb-12">
+                <h2 className="text-3xl font-black uppercase tracking-tighter text-gold-primary mb-4">Send Us a Message</h2>
+                <div className="w-12 h-1 bg-gold-300 mx-auto" />
+             </div>
+             <form className="space-y-10" onSubmit={e => e.preventDefault()}>
+                <div className="grid sm:grid-cols-2 gap-10">
+                   <div className="space-y-3">
+                      <label className="text-[10px] uppercase font-black text-gold-primary/40 tracking-widest">Full Name</label>
+                      <input className="w-full bg-white/5 border-b border-white/20 rounded-none px-0 py-4 outline-none focus:border-gold-300 transition-all font-sans text-lg text-white" placeholder="John Doe" />
+                   </div>
+                   <div className="space-y-3">
+                      <label className="text-[10px] uppercase font-black text-gold-primary/40 tracking-widest">Email Address</label>
+                      <input className="w-full bg-white/5 border-b border-white/20 rounded-none px-0 py-4 outline-none focus:border-gold-300 transition-all font-sans text-lg text-white" placeholder="john@company.com" />
+                   </div>
+                </div>
+                <div className="space-y-3">
+                   <label className="text-[10px] uppercase font-black text-gold-primary/40 tracking-widest">Your Message</label>
+                   <textarea rows={4} className="w-full bg-white/5 border-b border-white/20 rounded-none px-0 py-4 outline-none focus:border-gold-300 transition-all resize-none font-sans text-lg text-white" placeholder="Describe your inquiry..." />
+                </div>
+                <button className="w-full py-6 bg-gold-300 text-black font-black uppercase tracking-[0.3em] text-xs rounded-sm hover:bg-gold-400 transition-all shadow-xl shadow-gold-300/10 active:scale-[0.98]">Submit Inquiry</button>
+                
+                <div className="pt-12 text-center border-t border-white/5 mt-6">
+                   <p className="text-[10px] uppercase font-black text-gold-primary/40 tracking-[0.2em] mb-4">OR CONTACT US DIRECTLY VIA EMAIL:</p>
+                   <a href="mailto:changenjuan@gmail.com" className="text-xl md:text-3xl font-black text-gold-primary hover:text-gold-200 transition-colors tracking-tight">
+                      changenjuan@gmail.com
+                   </a>
+                </div>
+             </form>
+          </div>
+       </div>
+    </section>
+  </motion.div>
+);
+
+// --- Sub-components ---
+
+const GradientBanner = ({ text, bgClass }: { text: string, bgClass: string }) => (
+  <div className={`py-28 flex justify-center border-t border-black/20 ${bgClass}`}>
+    <p className="text-2xl md:text-5xl font-black uppercase tracking-tighter text-gold-primary text-center px-6 leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+      {text}
+    </p>
+  </div>
+);
+
+const DetailTab = ({ label }: { label: string }) => (
+  <div className="py-12 px-10 bg-gradient-to-r from-gold-900/40 to-transparent border-l-4 border-gold-300 flex items-center justify-between group cursor-pointer hover:from-gold-900 transition-all duration-500">
+    <span className="text-2xl md:text-4xl font-black uppercase tracking-tighter">{label}</span>
+    <ChevronRight className="text-gold-300 group-hover:translate-x-2 transition-transform" size={40} />
+  </div>
+);
+
+const TierCard = ({ tier, returnRate, features, highlighted = false, onClick }: { tier: string, returnRate: string, features: string[], highlighted?: boolean, onClick?: () => void }) => (
+  <div className={`p-12 rounded-2xl border flex flex-col gap-10 transition-all duration-500 ${highlighted ? "bg-gold-300 text-black border-gold-300 scale-105" : "bg-zinc-900 border-white/5"}`}>
+    <div>
+      <span className={`text-[10px] font-black uppercase tracking-widest ${highlighted ? "text-black/60" : "text-gold-300"}`}>{tier}</span>
+      <h3 className="text-2xl font-black uppercase tracking-tight mt-3">{returnRate}</h3>
+    </div>
+    <ul className="flex-1 space-y-6">
+      {features.map((f, i) => (
+        <li key={i} className="flex gap-3 text-[14px] font-bold">
+          <CheckIcon highlighted={highlighted} />
+          {f}
+        </li>
+      ))}
+    </ul>
+    <button 
+      onClick={onClick}
+      className={`w-full py-4 uppercase tracking-widest text-[11px] font-black rounded-sm border transition-all ${highlighted ? "bg-black text-gold-300 border-black" : "border-white/20 hover:bg-white hover:text-black"}`}
+    >
+      Apply Now
+    </button>
+  </div>
+);
+
+const CheckIcon = ({ highlighted }: { highlighted: boolean }) => (
+  <svg className={`w-5 h-5 flex-shrink-0 ${highlighted ? "text-black/40" : "text-gold-300"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const Footer = () => (
+  <footer className="py-24 px-6 bg-black border-t border-white/5">
+    <div className="max-w-7xl mx-auto flex flex-col items-center">
+      <h2 className="text-lg font-black tracking-[0.5em] uppercase mb-12 text-gold-primary">OSSA STUDIO</h2>
+      <div className="flex gap-12 mb-12">
+        {["Privacy Policy", "Terms of Use", "Press Kit", "Media Resources"].map(link => (
+          <a key={link} href="#" className="text-[10px] font-bold uppercase tracking-widest text-gold-primary/30 hover:text-gold-primary transition-colors">{link}</a>
+        ))}
+      </div>
+      <div className="flex gap-10 mb-12">
+        {["WEIBO", "LINKEDIN", "INSTAGRAM", "WECHAT"].map(s => (
+          <a key={s} href="#" className="text-[10px] font-black tracking-[0.4em] text-gold-primary/50 hover:text-gold-300 transition-colors">{s}</a>
+        ))}
+      </div>
+      <p className="text-[10px] uppercase tracking-widest text-gold-primary/10">© 2024 THE DIGITAL CURATOR. ALL RIGHTS RESERVED.</p>
+    </div>
+  </footer>
+);
+
+// --- App Root ---
+
+export default function App() {
+  const [activePage, setActivePage] = useState<Page>("HOME");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activePage]);
+
+  return (
+    <div className="min-h-screen bg-black font-sans selection:bg-gold-400 selection:text-black antialiased relative">
+      <Navbar activePage={activePage} setActivePage={setActivePage} />
+      
+      <main className="relative z-10">
+        <AnimatePresence mode="wait">
+          {activePage === "HOME" && <HomePage onNavigate={setActivePage} />}
+          {activePage === "PROJECT" && <ProjectPage onNavigate={setActivePage} />}
+          {activePage === "INVESTMENT" && <InvestmentPage onNavigate={setActivePage} />}
+          {activePage === "CONTACT" && <ContactPage />}
+        </AnimatePresence>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
